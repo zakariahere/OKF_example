@@ -1,0 +1,96 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OKF — OKF/.okf</title>
+<script src="https://cdn.jsdelivr.net/npm/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@14/marked.min.js"></script>
+<style>
+ :root{--bg:#0e0f13;--panel:#16181f;--line:#262a35;--fg:#e6e8ee;--mut:#9aa3b2;--accent:#8ab4ff}
+ *{box-sizing:border-box} html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
+   font:14px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+ #app{display:grid;grid-template-columns:1fr 400px;height:100vh}
+ #cy{width:100%;height:100%}
+ #side{border-left:1px solid var(--line);background:var(--panel);overflow:auto;padding:18px}
+ header{position:absolute;top:0;left:0;padding:14px 18px;z-index:5;pointer-events:none}
+ h1{font-size:15px;margin:0;font-weight:650} .sub{color:var(--mut);font-size:12px;margin-top:2px}
+ #bar{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:5;display:flex;gap:8px}
+ #bar input,#bar select{background:var(--panel);border:1px solid var(--line);color:var(--fg);
+   border-radius:8px;padding:8px 10px;outline:none;font-size:13px}
+ #search{width:min(300px,32vw)}
+ #legend{position:absolute;bottom:14px;left:18px;z-index:5;display:flex;flex-wrap:wrap;gap:6px;max-width:60vw}
+ .chip{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);
+   border-radius:20px;padding:3px 10px;font-size:12px;color:var(--mut);cursor:pointer;user-select:none}
+ .chip.off{opacity:.4} .dot{width:10px;height:10px;border-radius:50%}
+ #side h2{font-size:17px;margin:.2em 0} .type{display:inline-block;border-radius:6px;padding:2px 8px;
+   font-size:11px;font-weight:600;color:#0e0f13} .desc{color:var(--mut);margin:8px 0 12px}
+ .tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+ .tag{background:#1d2230;border:1px solid var(--line);border-radius:6px;padding:1px 8px;font-size:11px;color:var(--mut)}
+ .rel{margin:10px 0} .rel h4{margin:0 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut)}
+ .rel a{display:block;color:var(--accent);cursor:pointer;font-size:13px;padding:1px 0;text-decoration:none}
+ .rel a:hover{text-decoration:underline}
+ .body{border-top:1px solid var(--line);padding-top:12px;margin-top:12px} .body table{border-collapse:collapse;display:block;overflow:auto}
+ .body td,.body th{border:1px solid var(--line);padding:4px 8px} .body code{background:#1d2230;padding:1px 5px;border-radius:4px}
+ .body pre{background:#1d2230;padding:10px;border-radius:8px;overflow:auto} .body img{max-width:100%}
+ .empty{color:var(--mut)} a{color:var(--accent)}
+</style></head><body>
+<div id="app"><div id="cy"></div><div id="side"><p class="empty">Click a concept to inspect it.</p></div></div>
+<header><h1>OKF/.okf</h1><div class="sub">3 concepts · 4 links · OKF v0.1</div></header>
+<div id="bar">
+ <input id="search" placeholder="search concepts…">
+ <select id="type"><option value="">all types</option></select>
+ <select id="layout">
+  <option value="cose">force</option><option value="concentric">concentric</option>
+  <option value="breadthfirst">breadth-first</option><option value="circle">circle</option><option value="grid">grid</option>
+ </select>
+</div>
+<div id="legend"></div>
+<script>
+const NODES=[{"id": "concepts/tasks-file", "type": "Local File", "title": "Tasks File", "description": "A plain-markdown checklist of tasks, stored in the repo.", "tags": ["tasks", "local", "markdown", "executable"], "group": "concepts", "sz": 28, "body": "# Tasks File\n\nThe single source of truth for the task tracker. It is a real file at\n`./data/tasks.md`, so any agent with file tools can read and edit it directly \u2014\nno database or network required.\n\n## Schema\n\nEach task is one markdown checklist line with this exact shape:\n\n```\n- [ ] (t<N>) <title> \u2014 <YYYY-MM-DD>\n```\n\n| Part | Meaning |\n|------|---------|\n| `[ ]` / `[x]` | open / done |\n| `(t<N>)` | unique id, `t` + an integer (e.g. `t4`) |\n| `<title>` | free text describing the task |\n| `\u2014 <YYYY-MM-DD>` | the date the task was added |\n\nThe file always starts with a `# Tasks` heading. New tasks are appended at the\nbottom.\n\n## Examples\n\n```\n- [ ] (t1) Buy milk \u2014 2026-06-28\n- [x] (t2) Send the invoice to Acme \u2014 2026-06-27\n```\n\n## Citations\n\n- Operated on by the [add-task](/playbooks/add-task.md) and\n  [complete-task](/playbooks/complete-task.md) playbooks."}, {"id": "playbooks/add-task", "type": "Playbook", "title": "Add a Task", "description": "Append a new open task to the tasks file.", "tags": ["playbook", "tasks", "write"], "group": "playbooks", "sz": 27, "body": "# Add a Task\n\nHow an agent adds a new task to the [tasks file](/concepts/tasks-file.md). Fully\nexecutable with file tools \u2014 no DB access.\n\n## Steps\n\n1. Read [/concepts/tasks-file.md](/concepts/tasks-file.md) to confirm the line\n   format and where new tasks go (appended at the bottom).\n2. Read `./data/tasks.md` and find the highest existing id `t<N>`.\n3. Choose the next id `t<N+1>`.\n4. Append one line:\n   `- [ ] (t<N+1>) <the task title> \u2014 <today's date YYYY-MM-DD>`\n5. Confirm to the user what was added.\n\n## Examples\n\n> User: \"add a task to water the plants\"\n\nThe agent sees the highest id is `t3`, so it appends:\n\n```\n- [ ] (t4) Water the plants \u2014 2026-06-28\n```"}, {"id": "playbooks/complete-task", "type": "Playbook", "title": "Complete a Task", "description": "Mark an existing task as done in the tasks file.", "tags": ["playbook", "tasks", "edit"], "group": "playbooks", "sz": 27, "body": "# Complete a Task\n\nHow an agent marks a task done in the [tasks file](/concepts/tasks-file.md).\nFully executable with file tools \u2014 no DB access.\n\n## Steps\n\n1. Read [/concepts/tasks-file.md](/concepts/tasks-file.md) for the line format.\n2. Read `./data/tasks.md` and locate the line whose id `(t<N>)` matches the\n   target task. If the task is named instead of numbered, match on the title.\n3. Change that line's `[ ]` to `[x]`. Leave the rest of the line unchanged.\n4. If the task is already `[x]`, report that it was already done.\n5. Confirm to the user which task was completed.\n\n## Examples\n\n> User: \"mark t1 as done\"\n\nThe agent changes:\n\n```\n- [ ] (t1) Buy milk \u2014 2026-06-28\n```\n\ninto:\n\n```\n- [x] (t1) Buy milk \u2014 2026-06-28\n```"}], EDGES=[{"source": "concepts/tasks-file", "target": "playbooks/add-task"}, {"source": "concepts/tasks-file", "target": "playbooks/complete-task"}, {"source": "playbooks/add-task", "target": "concepts/tasks-file"}, {"source": "playbooks/complete-task", "target": "concepts/tasks-file"}];
+const PALETTE=["#6E56CF","#D97757","#22C55E","#3B82F6","#EAB308","#EC4899","#14B8A6","#F97316","#A855F7","#0EA5E9","#84CC16","#EF4444","#64748B"];
+const byId=Object.fromEntries(NODES.map(n=>[n.id,n]));
+const outL={}, inL={};
+NODES.forEach(n=>{outL[n.id]=[];inL[n.id]=[];});
+EDGES.forEach(e=>{outL[e.source].push(e.target);inL[e.target].push(e.source);});
+const types=[...new Set(NODES.map(n=>n.type))].sort();
+const color=Object.fromEntries(types.map((t,i)=>[t,PALETTE[i%PALETTE.length]]));
+const off=new Set();
+const cy=cytoscape({container:document.getElementById('cy'),
+ elements:[...NODES.map(n=>({data:{...n,c:color[n.type]}})),...EDGES.map(e=>({data:e}))],
+ style:[
+  {selector:'node',style:{'background-color':'data(c)','label':'data(title)','color':'#e6e8ee',
+   'font-size':10,'text-wrap':'wrap','text-max-width':120,'text-valign':'bottom','text-margin-y':4,
+   'width':'data(sz)','height':'data(sz)'}},
+  {selector:'edge',style:{'width':1.2,'line-color':'#3a4150','target-arrow-color':'#3a4150',
+   'target-arrow-shape':'triangle','arrow-scale':.8,'curve-style':'bezier','opacity':.7}},
+  {selector:'.dim',style:{'opacity':.10}},{selector:'.hl',style:{'border-width':3,'border-color':'#fff'}}
+ ],
+ layout:{name:'cose',animate:false,nodeRepulsion:9000,idealEdgeLength:90,padding:40}});
+const side=document.getElementById('side');
+const esc=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function relList(title,arr){if(!arr.length)return'';
+ return `<div class="rel"><h4>${title}</h4>${arr.map(id=>`<a data-go="${esc(id)}">${esc((byId[id]||{}).title||id)}</a>`).join('')}</div>`;}
+function show(id){const n=byId[id];if(!n)return;const c=color[n.type];
+ side.innerHTML=`<span class="type" style="background:${c}">${esc(n.type)}</span>
+ <h2>${esc(n.title)}</h2><div class="desc">${esc(n.description)||'<span class=empty>no description</span>'}</div>
+ <div class="tags">${(n.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>
+ ${relList('Links to',outL[id])}${relList('Cited by',inL[id])}
+ <div class="body">${n.body?marked.parse(n.body):'<span class=empty>empty body</span>'}</div>`;
+ side.querySelectorAll('[data-go]').forEach(a=>a.onclick=()=>select(a.getAttribute('data-go')));}
+function select(id){const ele=cy.getElementById(id);if(!ele.length)return;show(id);
+ cy.elements().removeClass('hl').addClass('dim');const nb=ele.closedNeighborhood();nb.removeClass('dim');ele.addClass('hl');
+ cy.animate({center:{eles:ele},duration:250});}
+cy.on('tap','node',e=>select(e.target.id()));
+cy.on('tap',e=>{if(e.target===cy)cy.elements().removeClass('dim hl');});
+function applyFilter(){const q=document.getElementById('search').value.toLowerCase();const ty=document.getElementById('type').value;
+ cy.nodes().forEach(n=>{const d=n.data();
+  const m=(!q||(d.title+' '+d.type+' '+d.description+' '+(d.tags||[]).join(' ')).toLowerCase().includes(q))
+        &&(!ty||d.type===ty)&&!off.has(d.type);
+  n.style('display',m?'element':'none');});}
+document.getElementById('search').oninput=applyFilter;
+document.getElementById('type').oninput=applyFilter;
+const tysel=document.getElementById('type');types.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;tysel.appendChild(o);});
+document.getElementById('layout').onchange=e=>{cy.layout({name:e.target.value,animate:true,padding:40,
+ nodeRepulsion:9000,idealEdgeLength:90}).run();};
+document.getElementById('legend').innerHTML=types.map(t=>`<span class="chip" data-t="${esc(t)}"><span class="dot" style="background:${color[t]}"></span>${esc(t)} (${NODES.filter(n=>n.type===t).length})</span>`).join('');
+document.querySelectorAll('#legend .chip').forEach(ch=>ch.onclick=()=>{const t=ch.getAttribute('data-t');
+ if(off.has(t)){off.delete(t);ch.classList.remove('off');}else{off.add(t);ch.classList.add('off');}applyFilter();});
+</script></body></html>
